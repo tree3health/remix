@@ -25,6 +25,8 @@ jobs:
       - name: 👀 Check for commits
         id: nightly
         run: |
+          # if you're changing the paths to be counted, make sure you also update
+          # /scripts/release/octokit.mjs
           count=$(git rev-list $GITHUB_SHA..HEAD --count packages)
           echo "commit count $count"
           if [ "$count" -gt "0" ]; then
