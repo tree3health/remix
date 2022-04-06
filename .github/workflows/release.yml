@@ -25,7 +25,7 @@ jobs:
       - name: 👀 Check for commits
         id: nightly
         run: |
-          count=$(git rev-list $GITHUB_SHA..HEAD --count)
+          count=$(git rev-list $GITHUB_SHA..HEAD --count packages)
           echo "commit count $count"
           if [ "$count" -gt "0" ]; then
             echo "::set-output name=RELEASE::true"
