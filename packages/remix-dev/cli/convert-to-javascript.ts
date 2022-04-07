@@ -7,6 +7,8 @@ import babelPluginSyntaxJSX from "@babel/plugin-syntax-jsx";
 // @ts-expect-error these modules dont have types
 import babelPresetTypeScript from "@babel/preset-typescript";
 import prettier from "prettier";
+// @ts-expect-error these modules dont have types
+import packageJson from "@npmcli/package-json";
 
 function convertToJavaScript(
   filename: string,
@@ -67,19 +69,13 @@ export async function convertTemplateToJavaScript(projectDir: string) {
   }
 
   // 3. Remove @types/* and typescript from package.json
-  let packageJsonPath = path.join(projectDir, "package.json");
-  if (!fse.existsSync(packageJsonPath)) {
-    throw new Error("Could not find package.json");
-  }
-  let pkg = JSON.parse(fse.readFileSync(packageJsonPath, "utf8"));
-  let devDeps = pkg.devDependencies || {};
-  devDeps = Object.fromEntries(
-    Object.entries(devDeps).filter(([name]) => {
-      return !name.startsWith("@types/") && name !== "typescript";
-    })
-  );
-  pkg.devDependencies = devDeps;
-  fse.writeJSONSync(packageJsonPath, pkg, {
-    spaces: 2,
+  let pkg = await packageJson.load(projectDir);
+  pkg.update({
+    devDependencies: Object.fromEntries(
+      Object.entries(pkg.content.devDependencies).filter(([name]) => {
+        return !name.startsWith("@types/") && name !== "typescript";
+      })
+    ),
   });
+  await pkg.save();
 }
