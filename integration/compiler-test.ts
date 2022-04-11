@@ -55,9 +55,28 @@ describe("compiler", () => {
             return <div id="esm-only-pkg">{esmOnlyPkg}</div>;
           }
         `,
+        "app/routes/esm-only-exports-pkg.jsx": js`
+          import esmOnlyPkg from "esm-only-exports-pkg";
+
+          export default function EsmOnlyPkg() {
+            return <div id="esm-only-exports-pkg">{esmOnlyPkg}</div>;
+          }
+        `,
+        "app/routes/esm-only-single-export.jsx": js`
+          import esmOnlyPkg from "esm-only-single-export";
+
+          export default function EsmOnlyPkg() {
+            return <div id="esm-only-single-export">{esmOnlyPkg}</div>;
+          }
+        `,
         "remix.config.js": js`
+          let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
-            serverDependenciesToBundle: ["esm-only-pkg"],
+            serverDependenciesToBundle: [
+              "esm-only-pkg",
+              "esm-only-single-export",
+              ...getDependenciesToBundle("esm-only-exports-pkg"),
+            ],
           };
         `,
         "node_modules/esm-only-pkg/package.json": `{
@@ -68,6 +87,27 @@ describe("compiler", () => {
         }`,
         "node_modules/esm-only-pkg/esm-only-pkg.js": js`
           export default "esm-only-pkg";
+        `,
+        "node_modules/esm-only-exports-pkg/package.json": `{
+          "name": "esm-only-exports-pkg",
+          "version": "1.0.0",
+          "type": "module",
+          "exports": {
+            ".": "./esm-only-exports-pkg.js"
+          }
+        }`,
+        "node_modules/esm-only-exports-pkg/esm-only-exports-pkg.js": js`
+          export default "esm-only-exports-pkg";
+        `,
+
+        "node_modules/esm-only-single-export/package.json": `{
+          "name": "esm-only-exports-pkg",
+          "version": "1.0.0",
+          "type": "module",
+          "exports": "./esm-only-single-export.js"
+        }`,
+        "node_modules/esm-only-single-export/esm-only-single-export.js": js`
+          export default "esm-only-single-export";
         `,
       },
     });
@@ -137,6 +177,24 @@ describe("compiler", () => {
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#esm-only-pkg")).toMatchInlineSnapshot(
       `"<div id=\\"esm-only-pkg\\">esm-only-pkg</div>"`
+    );
+  });
+
+  it("allows consumption of ESM modules in CJS builds with `serverDependenciesToBundle` when the package only exports a single file", async () => {
+    let res = await app.goto("/esm-only-single-export", true);
+    expect(res.status()).toBe(200); // server rendered fine
+    // rendered the page instead of the error boundary
+    expect(await app.getHtml("#esm-only-single-export")).toMatchInlineSnapshot(
+      `"<div id=\\"esm-only-single-export\\">esm-only-single-export</div>"`
+    );
+  });
+
+  it("allows consumption of ESM modules with exports in CJS builds with `serverDependenciesToBundle` and `getDependenciesToBundle`", async () => {
+    let res = await app.goto("/esm-only-exports-pkg", true);
+    expect(res.status()).toBe(200); // server rendered fine
+    // rendered the page instead of the error boundary
+    expect(await app.getHtml("#esm-only-exports-pkg")).toMatchInlineSnapshot(
+      `"<div id=\\"esm-only-exports-pkg\\">esm-only-exports-pkg</div>"`
     );
   });
 });
